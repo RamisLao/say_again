@@ -1,0 +1,61 @@
+body {
+    font-family: 'Open Sans', 'Helvetica neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+/*jumbotron general style*/
+.jumbotron {
+    text-align: center;
+    text-decoration-style: dashed;
+    margin: 0 auto;
+    position: static;
+}
+
+#div-upload {
+    position: relative;
+    margin: 0 auto;
+}
+
+/*jumbotron form*/
+.jumbotron form {
+    text-align: center;
+    width:600px;
+    margin:10px auto;
+    padding:20px;
+    background: rgb(255,255,255);
+    background: rgba(255,255,255,0.8);
+    border:solid black;
+    border-width: 1px;
+    position: relative;
+}
+
+#results {
+    text-align: justify;
+    text-decoration-style: dashed;
+    margin: 0 auto;
+    position: static;
+}
+
+#results-table {
+    position: relative;
+    margin: 0 auto;
+    border: 1px solid black;
+    text-align: justify;
+    width: 100%;
+}
+
+#results-table th {
+    text-align: justify;
+    height: 50px;
+    font-size: 20px;
+}
+
+#results-table th, #results-table td {
+    border: solid black;
+    border-width: 1px;
+    padding: 10px;
+}
+
+

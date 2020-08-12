@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang='en'>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <title>Say Again?</title>
+        
+        <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        
+        <!-- Bootstrap -->
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+        
+        <!-- jQuery Confirm -->
+        <link href="css/jquery-confirm.min.css" rel='stylesheet'>
+        <script src="js/jquery-confirm.min.js"></script>
+        
+        <!-- Custom CSS -->
+        <link rel='stylesheet' href="css/custom.css">
+        
+        <!-- Add icon library -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        
+        <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+          <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+          <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <body>
+        
+        <nav class="navbar navbar-inverse">
+          <div class="container-fluid">
+            <div class="navbar-header">
+              <a class="navbar-brand" href="http://localhost:8014/">Say Again?</a>
+            </div>
+            <ul class="nav navbar-nav">
+              <li class="active"><a href="http://localhost:8014/">Upload</a></li>
+              <li><a href="http://localhost:8014/translate.html">Translate</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="http://localhost:8014/archive.html">Archive</a></li>
+            </ul>
+          </div>
+        </nav>
+    
+        <!-- Jumbotron -->
+        <div class='jumbotron'>
+            <div class='container' id=div-translate>
+                
+                <form action='/api' accept-charset='UTF-8' id='translate' method='post' enctype='multipart/form-data'>
+                    <h3>What do you want to translate?</h3>
+                    <br/>
+                    <span class='instructions'>Enter text to translate</span>
+                    <input type='text' name='text_to_translate'/> <br/><br/>
+                    
+                    <span class='instructions'><strong>Translate from: </strong></span>
+                    <input type='radio' name='orig_lang' value='spanish' checked> Spanish
+                    <input type='radio' name='orig_lang' value='english'> English
+                    <input type='radio' name='orig_lang' value='french'> French
+                    <span class='instructions'><strong> / to: </strong></span>
+                    <input type='radio' name='tran_lang' value='spanish' checked> Spanish
+                    <input type='radio' name='tran_lang' value='english'> English
+                    <input type='radio' name='tran_lang' value='french'> French <br/><br/>
+                    
+                    <span>How many results do you want?</span>
+                    <input type='text' id='limit_of_search' name='limit_of_search'/> <br/><br/>
+                    <span>Select File</span>
+                    <select id='select-doc' name='select_doc'>
+                        <option value='All'>All</option>
+                    </select>
+                    <br/><br/>
+                    
+                    <button type='submit' value='Translate text!' id='translate-button' class="btn btn-primary btn-lg" data-loading-text="<i class='fa fa-spinner fa-spin '></i> Translating... Please wait!">Translate text!</button>
+                    <br/><br/>
+                    
+                    <input type='text' name='endpoint' value='translate_text' hidden/>
+                    <div id='main-word-form'></div>
+                </form>
+            
+            </div><!-- div-translate-->
+        </div><!-- jumbotron -->
+        
+        <div class='container' id='results' hidden>
+            <br/>
+            <h4 id='h4-phrase'></h4>
+            <br/>
+            <table id='results-table'></table>
+        </div>
+        
+    </body>
+</html>
+
+<script>
+    
+    /*Get available documents and put them on the dropdown menu*/
+    $( document ).ready(function() {
+        $.post('/api',
+              {'endpoint':'get_processed_files'},
+              function(response) {
+                response = JSON.parse(response);
+                var status = response['status'];
+                var processed_files = response['processed_files'];
+                if (status == 'error') {
+                    $.alert({
+                       title: "Error!",
+                        content: "There are no available files!"
+                    });
+                } else {
+                    var select_doc = document.getElementById('select-doc');
+                    for (var doc in processed_files) {
+                        var option = document.createElement('option');
+                        option.setAttribute('value', processed_files[doc]);
+                        option.innerHTML = processed_files[doc];
+                        select_doc.append(option)
+                    }
+                }
+        });
+    });
+
+    /*Send text to translate*/
+    $('#translate').submit(function(e) {
+        e.preventDefault();
+        $('#translate-button').button('loading');
+        var data = new FormData(this);
+        $.ajax({
+            type: 'POST',
+            url: '/api',
+            data: data,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                try {
+                    JSON.parse(response);
+                } catch (e) {
+                    alert(response);
+                    return;
+                }
+                $('#translate-button').button('reset');
+                response = JSON.parse(response)
+                var status = response['status'];
+                if (status == 'ok') {
+                    showResults(response);
+                } else {
+                    $.alert({
+                        title: "Error!",
+                        content: response['user_prompt']
+                    });
+                }
+            },
+            error: function(response) {
+                $('#translate-button').button('reset');
+                $.alert({
+                   title: "Error!",
+                   content: response
+                });
+            }
+        })
+    })
+    
+    /*Show the resulting translations*/
+    function showResults(response) {
+        var results_div = $( '#results' );
+        results_div.show(250);
+        
+        var paragraphs = response['paragraphs'];
+        console.log(paragraphs[0]['item'][0]['lang']);
+        console.log(paragraphs[0]['item'][1]['lang']);
+        var orig_lang = paragraphs[0]['item'][0]['lang'];
+        var tran_lang = paragraphs[0]['item'][1]['lang'];
+        var paragraphs_length = paragraphs.length;
+        
+        var phrase = response['phrase'];
+        var h4_phrase = $('#h4-phrase');
+        h4_phrase.empty();
+        var span_phrase = document.createElement('span');
+        if (paragraphs_length == 1) {
+            span_phrase.innerHTML = paragraphs_length+' result for "'+phrase+'"';
+        } else {
+            span_phrase.innerHTML = paragraphs_length+' results for "'+phrase+'"';
+        }
+        h4_phrase.append(span_phrase);
+        
+        var form_extra = $('#main-word-form');
+        form_extra.empty();
+        
+        /*Fill form with radios to choose a different main word*/
+        var main_word = document.createElement('h4');
+        main_word.innerHTML = "Main word: " + response['main_word'];
+        var title = document.createElement('h5');
+        title.innerHTML = "Choose a different main word and translate again!";
+        form_extra.append(main_word)
+        form_extra.append(title);
+        var phrase_array = phrase.split(' ');
+        for (var word in phrase_array) {
+            var span = document.createElement('span');
+            if (word != 0) {
+                span.innerHTML = ' // '+phrase_array[word]+": ";
+            } else {
+                span.innerHTML = ' '+phrase_array[word]+": ";
+            }
+            var radio = document.createElement('input');
+            radio.setAttribute('type', 'radio');
+            radio.setAttribute('name', 'main_word');
+            radio.setAttribute('value', phrase_array[word]);
+            form_extra.append(span);
+            form_extra.append(radio);
+        }     
+        
+        /*Create table of results*/
+        var table = $('#results-table');
+        table.empty();
+        
+        var headers = document.createElement('tr');
+        var orig_paragraphs = document.createElement('th');
+        orig_paragraphs.innerHTML = "Paragraphs in: "+orig_lang;
+        var tran_paragraphs = document.createElement('th');
+        tran_paragraphs.innerHTML = "Paragraphs in: "+tran_lang;
+        headers.append(orig_paragraphs);
+        headers.append(tran_paragraphs);
+        table.append(headers);
+        var row_extra = document.createElement('tr');
+        var td1_extra = document.createElement('td');
+        td1_extra.innerHTML = "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=";
+        row_extra.append(td1_extra);
+        var td2_extra = document.createElement('td');
+        td2_extra.innerHTML = "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=";
+        row_extra.append(td2_extra);
+        table.append(row_extra);
+        
+        
+        var number_of_doc = 1;
+        for (var element in paragraphs) {
+            var item = paragraphs[element]['item'];
+            var row1 = document.createElement('tr');
+            var document1 = document.createElement('td');
+            document1.innerHTML = number_of_doc + " - From: " + item[0]['doc'];
+            var document2 = document.createElement('td');
+            document2.innerHTML = number_of_doc + " - From: " + item[1]['doc'];
+            number_of_doc++;
+            row1.append(document1);
+            row1.append(document2);
+            table.append(row1);
+            
+            var row1_5 = document.createElement('tr');
+            var orig1 = document.createElement('td');
+            var orig2 = document.createElement('td');
+            if (item[0]['orig_or_tran'] == 'original') {
+                orig1.innerHTML = "Original document";
+                orig2.innerHTML = "Translated document";
+            } else {
+                orig2.innerHTML = "Original document";
+                orig1.innerHTML = "Translated document";
+            }
+            row1_5.append(orig1);
+            row1_5.append(orig2);
+            table.append(row1_5);
+            
+            var row2 = document.createElement('tr');
+            var num_par1 = document.createElement('td');
+            num_par1.innerHTML = "# of paragraph: " + item[0]['#p'];
+            var num_par2 = document.createElement('td');
+            num_par2.innerHTML = "# of paragraph: " + item[1]['#p'];
+            row2.append(num_par1);
+            row2.append(num_par2);
+            table.append(row2);
+            
+            var row3 = document.createElement('tr');
+            var translated_phrase = response['translated_phrase'].split(' ');
+            
+            /*Color "phrase" and "translated_phrase" in results*/
+            var paragraph1_text = item[0]['paragraph'];
+            for (var word in phrase_array) {
+                var re = new RegExp(phrase_array[word], 'g');
+                paragraph1_text = paragraph1_text.replace(re, '<span style="color:red;">'+phrase_array[word]+'</span>');
+                var re2 = new RegExp("{ Caution! Due to the length of this paragraph, the translation might be wrong! } ", 'g');
+                paragraph1_text = paragraph1_text.replace(re2, '<strong>'+"{ Caution! Due to the length of this paragraph, the translation might be wrong! } "+'</strong>');
+            }
+            var paragraph1 = document.createElement('td');
+            paragraph1.innerHTML = paragraph1_text;
+            
+            var paragraph2_text = item[1]['paragraph'];
+            for (var word in translated_phrase) {
+                var re = new RegExp(translated_phrase[word], 'g');
+                paragraph2_text = paragraph2_text.replace(re, '<span style="color:red;">'+translated_phrase[word]+'</span>');
+            }
+            var paragraph2 = document.createElement('td');
+            paragraph2.innerHTML = paragraph2_text;
+            
+            row3.append(paragraph1);
+            row3.append(paragraph2);
+            table.append(row3);
+            var row4 = document.createElement('tr');
+            var td1 = document.createElement('td');
+            td1.innerHTML = "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=";
+            row4.append(td1);
+            var td2 = document.createElement('td');
+            td2.innerHTML = "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=";
+            row4.append(td2);
+            table.append(row4);
+        }  
+    }
+    
+</script>
